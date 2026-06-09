@@ -104,19 +104,30 @@ finished = connectatALReactor
 localitzaNucli :: Nucli -> [posicio]
 localitzaNucli (nucli ps) = ps
 
+estaDret :: Nucli -> Bool
+estaDret (Nucli ps) = length ps == 1
+
 connectatALReactor :: JocMonad -> Bool
 connectatAlReactor joc = 
   estaDret (nucli joc) &&
   localitzaNucli (nucli joc) == [reactor joc]
 
--- HE ARRIBAT FINS AQUI!!!
+esPlataforma :: JocMonad -> posicio -> Bool
+esPlataforma joc (r,c) = 
+  r >= 0 && r < nFiles joc &&
+  c >= 0 && c < nColumnes joc &&
+  ((tauler joc !! r) !! c) /= '0'
 
-esPlataforma        = todo
+esSegur :: JocMonad -> Bool
+esSegur joc = 
+  all (esPlataforma joc) (localitzaNucli (nucli joc))
 
-esSegur             = todo
+succionat :: JocMonad -> Bool
+succionat joc = not (esSegur joc)
+
+--FINS AQUÍ FETA LA BASE DEL GAME, S'HA DE REPASSAR PER ENTENDRE BÉ QUE ES EL QUE ESTIC FENT PERO NO SEMBLA MOLT DIFICIL
+-- LO QUE PASSA ES QUE NO ACABO D'ENTENDRE DEL TOT BE LA SINTAXI DEL HASKELL, PERO DE MOMENT NO SEMBLA MOLT COMPLICAT
 
 maniobra            = todo
-
-succionat           = todo
 
 soluciona           = todo
