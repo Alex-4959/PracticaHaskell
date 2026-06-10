@@ -1,4 +1,4 @@
-import System.IO
+import System.IO (hFlush, stdout)
 import Control.Monad
 
 import Parser (parseInstance)
@@ -10,12 +10,12 @@ main = do
     -- demana el nom del fitxer .txt, el llegeix i finalment ho 'virtualitza'
     --
     putStr "Instance path: "
+    hFlush stdout
     ins <- parseInstance <$> (getLine >>= readFile)
     putStrLn $ show ins
 
     --
-    -- observa que has de demanar el tipus de modalitat amb la que es jugara...
-    -- si tens dubtes, mira com ho he fet per poder demanar les direccions al metode `juga`
+    -- TODO: demanar el tipus de modalitat i cridar `juga`
     --
-
-    juga Huma estatInicial
+    let joc = estatInicial ins
+    juga Huma joc

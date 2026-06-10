@@ -4,130 +4,113 @@ import Control.Monad (unless)
 
 import Utils (todo, maybeHead)
 import Controller (Input(..), viToInput)
-import Parser (Instance(..), parseInstance) -- Importem la instancia del parser per poder llegir el fitxer i fer proves
-
---IMPRTANT!!!!
--- Aquest primer commit sobre aquest fitxer en concret, es simplement una base, no es segur de que sigui aixis, mentre funcioni, pots canviar coses
--- Ara mateix el que tinc fet, entenc perfectament fins al primer mètode de instance show JocMontad
--- A partir de aquest metode mes o menys veig el que vaig fent, estic copiant jo a ma el codi pero no acabo de pillar que es el que estic fent del tot
--- Perque ho sapigues, el codi de Parser.hs si que el podria donar per fet, aquest si que es facil i s'enten be, si no entens m'ho dius
-
-type posicio = (int, int)
-type tauler = [string]
-  
-data Nucli = Nucli [posicio]
-  deriving show ( Eq,show)
-
--- This of course need to be adapted to your needs
-data JocMonad = JocMonad
-{
-  alcadaNucli :: Int,
-  nColumnes :: Int,
-  nFiles :: Int,
-  tauler :: tauler,
-  inici :: posicio,
-  reactor :: posicio,
-  nucli :: Nucli
-} deriving (Eq)
+import Parser (Instance(..))
 
 
-instance Show JocMonad where
-  show joc = 
-    unlines [mostraFila r Fila | (r,Fila) <- zip [0..] (tauler joc)]
-    where
-      posNucli = localitzaNucli (nucli joc)
+-- ============================================================
+-- TIPUS
+-- ============================================================
 
-      mostraFila :: Int -> String -> String
-      mostraFila r fila = [mostraCasella (r,c) valor | (c,valor) <- zip [0..] fila]
-      
-      mostraCasella :: posicio -> Char -> Char
-      mostraCasella p valor
-        | p 'elem' posNucli = 'N'
-        | otherwise = valor
+-- Posició al tauler (fila, columna), 0-indexed
+type Posicio = (Int, Int)
 
+-- El tauler: guardem les línies originals del fitxer com a [String]
+type Tauler = [String]
 
--- Mode de joc, pot ser AI, QUE HO FACI LA MAQUINA, O QUE HO FACI L'USUARI, ES A DIR NOSALTRES
+-- El nucli de fusió: guardem la llista de posicions que ocupa
+data Nucli = Nucli [Posicio]
+  deriving (Eq, Show)
+
+-- Mode de joc
 data Mode = AI | Huma
--- I give you a dummy initial state, modify it as you need
+
+-- Estat complet del joc
+data JocMonad = JocMonad
+  { alcadaNucli :: Int       -- Alçada del nucli (unitats energètiques)
+  , nColumnes   :: Int       -- Nombre de columnes
+  , nFiles      :: Int       -- Nombre de files
+  , tauler      :: Tauler    -- El tauler (línies originals)
+  , inici       :: Posicio   -- Posició inicial (S)
+  , reactor     :: Posicio   -- Posició del reactor (G)
+  , nucli       :: Nucli     -- El nucli de fusió
+  } deriving (Eq)
+
+
+-- ============================================================
+-- ESTAT INICIAL
+-- ============================================================
+
+-- | Configura l'estat inicial del joc a partir d'una instància parsejada
 estatInicial :: Instance -> JocMonad
-estatInicial (Instance h cols rows t) = 
+estatInicial (Instance h cols rows t) =
   JocMonad
-  {
-    alcadaNucli = h,
-    nColumnes = cols,
-    nFiles = rows,
-    tauler = t,
-    inici = posInicial,
-    reactor = posFinal,
-    nucli = Nucli [posInicial]
-  }
+    { alcadaNucli = h
+    , nColumnes   = cols
+    , nFiles      = rows
+    , tauler      = t
+    , inici       = posInicial
+    , reactor     = posFinal
+    , nucli       = Nucli [posInicial]
+    }
   where
-    posInicial = trobaCaracter 'S' t -- Metodes per trobar on esta el caracter S i G que representen el que seria la posicio inicial des de on començem,
-    -- i la posicio final a la qual tenim com ha objectiu arribar al acabar l'execució
-    posFinal = trobaCaracter 'G' t
-  
-  trobaCaracter :: Char -> Tauler -> posicio
-  trobaCaracter ch t =
-    case [(r,c) | (r,fila) <- zip [0..] t,
-                  (c,valor) <- zip [0..] fila,
-                  valor == ch] of
-      (p:_) -> p
-      [] -> error ("No s'ha trobat el caracter " ++ [ch] ++ " al tauler.")
+    posInicial = trobaCaracter 'S' t
+    posFinal   = trobaCaracter 'G' t
 
--- This is where the magic happens, you need to finish this function to make the JocMonad work,
--- but I give you a dummy implementation to start with
-juga :: Mode -> JocMonad -> IO()
-juga AI   = todo
-juga Huma = loop
-    where
-      loop :: JocMonad -> IO()
-      loop joc = unless (finished joc) $ do
-        putStrLn $ "Introdueix una direccio (h/j/k/l): "
-        putStrLn $ show joc
-
-        input <- maybeHead <$> getLine
-
-        case input >>= viToInput of
-          Nothing -> do
-            putStrLn "Entrada incorrecta, torna-ho a provar."
-            loop joc
-
-          Just direc -> do
-            putStrLn $ "Has entrat: " ++ show direc
-            loop joc
+-- | Troba la posició (fila, columna) d'un caràcter dins les línies del tauler
+trobaCaracter :: Char -> Tauler -> Posicio
+trobaCaracter ch t =
+  case [(r, c) | (r, fila) <- zip [0..] t,
+                 (c, valor) <- zip [0..] fila,
+                 valor == ch] of
+    (p:_) -> p
+    []    -> error ("No s'ha trobat el caràcter " ++ [ch] ++ " al tauler.")
 
 
--- PSS... this is just a dummy implementation for the example, remove it if you don't need it
-finished :: JocMonad -> Bool
-finished = connectatALReactor
+-- ============================================================
+-- FUNCIONS BÀSIQUES DEL NUCLI
+-- ============================================================
 
-localitzaNucli :: Nucli -> [posicio]
-localitzaNucli (nucli ps) = ps
+-- | Retorna les posicions ocupades pel nucli al tauler
+localitzaNucli :: Nucli -> [Posicio]
+localitzaNucli (Nucli ps) = ps
 
+-- | Retorna True si el nucli està dret (vertical, ocupa 1 casella)
 estaDret :: Nucli -> Bool
 estaDret (Nucli ps) = length ps == 1
 
-connectatALReactor :: JocMonad -> Bool
-connectatAlReactor joc = 
-  estaDret (nucli joc) &&
-  localitzaNucli (nucli joc) == [reactor joc]
-
-esPlataforma :: JocMonad -> posicio -> Bool
-esPlataforma joc (r,c) = 
+-- | Donada una posició del tauler, retorna True si hi ha plataforma
+--   (qualsevol cosa diferent de '0' i dins dels límits)
+esPlataforma :: JocMonad -> Posicio -> Bool
+esPlataforma joc (r, c) =
   r >= 0 && r < nFiles joc &&
   c >= 0 && c < nColumnes joc &&
   ((tauler joc !! r) !! c) /= '0'
 
+-- | Verifica si el nucli està vertical sobre el connector del reactor
+connectatAlReactor :: JocMonad -> Bool
+connectatAlReactor joc =
+  estaDret (nucli joc) &&
+  localitzaNucli (nucli joc) == [reactor joc]
+
+-- | Determina si l'estat actual és segur (el nucli no cau)
 esSegur :: JocMonad -> Bool
-esSegur joc = 
+esSegur joc =
   all (esPlataforma joc) (localitzaNucli (nucli joc))
 
+-- | Determina si el nucli ha estat succionat (alguna part fora de plataforma)
 succionat :: JocMonad -> Bool
 succionat joc = not (esSegur joc)
 
---FINS AQUÍ FETA LA BASE DEL GAME, S'HA DE REPASSAR PER ENTENDRE BÉ QUE ES EL QUE ESTIC FENT PERO NO SEMBLA MOLT DIFICIL
--- LO QUE PASSA ES QUE NO ACABO D'ENTENDRE DEL TOT BE LA SINTAXI DEL HASKELL, PERO DE MOMENT NO SEMBLA MOLT COMPLICAT
 
-maniobra            = todo
+-- ============================================================
+-- FUNCIONS PENDENTS (TODO)
+-- ============================================================
 
-soluciona           = todo
+maniobra :: Input -> JocMonad -> JocMonad
+maniobra = todo
+
+soluciona :: JocMonad -> IO ()
+soluciona = todo
+
+juga :: Mode -> JocMonad -> IO ()
+juga = todo
