@@ -103,11 +103,55 @@ succionat joc = not (esSegur joc)
 
 
 -- ============================================================
--- FUNCIONS PENDENTS (TODO)
+-- MANIOBRA (MOVIMENT DEL NUCLI)
 -- ============================================================
 
+-- | Comprova si el nucli està tombat en direcció est-oest (mateixa fila)
+esHoritzontalEW :: Nucli -> Bool
+esHoritzontalEW (Nucli ps)
+  | length ps <= 1 = False
+  | otherwise      = let r = fst (head ps) in all (\(r',_) -> r' == r) ps
+
+-- | Comprova si el nucli està tombat en direcció nord-sud (mateixa columna)
+esHoritzontalNS :: Nucli -> Bool
+esHoritzontalNS (Nucli ps)
+  | length ps <= 1 = False
+  | otherwise      = let c = snd (head ps) in all (\(_,c') -> c' == c) ps
+
+-- | Moviment quan el nucli està dret (1 casella) → es tomba
+mouDret :: Input -> Int -> Posicio -> Nucli
+mouDret Nord h (r, c) = Nucli [(r - h + i, c) | i <- [0..h-1]]
+mouDret Sud  h (r, c) = Nucli [(r + 1 + i, c) | i <- [0..h-1]]
+mouDret Oest h (r, c) = Nucli [(r, c - h + i) | i <- [0..h-1]]
+mouDret Est  h (r, c) = Nucli [(r, c + 1 + i) | i <- [0..h-1]]
+
+-- | Moviment quan el nucli està tombat est-oest (mateixa fila, h caselles)
+--   Nord/Sud: llisca (manté orientació), Oest/Est: s'aixeca (torna a dret)
+mouHoritzontalEW :: Input -> Int -> Posicio -> Nucli
+mouHoritzontalEW Nord h (r, c) = Nucli [(r - 1, c + i) | i <- [0..h-1]]
+mouHoritzontalEW Sud  h (r, c) = Nucli [(r + 1, c + i) | i <- [0..h-1]]
+mouHoritzontalEW Oest _ (r, c) = Nucli [(r, c - 1)]
+mouHoritzontalEW Est  h (r, c) = Nucli [(r, c + h)]
+
+-- | Moviment quan el nucli està tombat nord-sud (mateixa columna, h caselles)
+--   Oest/Est: llisca (manté orientació), Nord/Sud: s'aixeca (torna a dret)
+mouHoritzontalNS :: Input -> Int -> Posicio -> Nucli
+mouHoritzontalNS Nord _ (r, c) = Nucli [(r - 1, c)]
+mouHoritzontalNS Sud  h (r, c) = Nucli [(r + h, c)]
+mouHoritzontalNS Oest h (r, c) = Nucli [(r + i, c - 1) | i <- [0..h-1]]
+mouHoritzontalNS Est  h (r, c) = Nucli [(r + i, c + 1) | i <- [0..h-1]]
+
+-- | Efectua un moviment del nucli en una direcció
 maniobra :: Input -> JocMonad -> JocMonad
-maniobra = todo
+maniobra dir joc = joc { nucli = nouNucli }
+  where
+    h = alcadaNucli joc
+    n = nucli joc
+    (r, c) = head (localitzaNucli n)
+    nouNucli
+      | estaDret n       = mouDret dir h (r, c)
+      | esHoritzontalEW n = mouHoritzontalEW dir h (r, c)
+      | otherwise         = mouHoritzontalNS dir h (r, c)
 
 soluciona :: JocMonad -> IO ()
 soluciona = todo
