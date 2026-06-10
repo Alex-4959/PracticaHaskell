@@ -35,6 +35,19 @@ data JocMonad = JocMonad
   , nucli       :: Nucli     -- El nucli de fusió
   } deriving (Eq)
 
+-- | Mostra el tauler amb el nucli representat com a 'N'
+instance Show JocMonad where
+  show joc = unlines [mostraFila r fila | (r, fila) <- zip [0..] (tauler joc)]
+    where
+      posNucli = localitzaNucli (nucli joc)
+
+      mostraFila :: Int -> String -> String
+      mostraFila r fila = [mostraCasella (r, c) valor | (c, valor) <- zip [0..] fila]
+
+      mostraCasella :: Posicio -> Char -> Char
+      mostraCasella p valor
+        | p `elem` posNucli = 'N'
+        | otherwise         = valor
 
 -- ============================================================
 -- ESTAT INICIAL
